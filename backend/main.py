@@ -22,7 +22,6 @@ scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 async def startup():
-    # Send Telegram alerts every day at 9am
     scheduler.add_job(send_scheduled_alerts, "cron", hour=9, minute=0)
     scheduler.start()
 

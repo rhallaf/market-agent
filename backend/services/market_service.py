@@ -2,6 +2,8 @@ import yfinance as yf
 import pandas as pd
 import ta
 import requests
+import yfinance as yf
+yf.set_tz_cache_location("/tmp")
 
 # Session avec User-Agent pour éviter le blocage Yahoo Finance sur les serveurs cloud
 _session = requests.Session()
