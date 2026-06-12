@@ -118,7 +118,7 @@ async def _call_deepseek(messages: list, max_tokens: int = 1200) -> str:
         return data["choices"][0]["message"]["content"]
 
 
-def build_market_context(budget: int, filter_type: str = "all", risk_profile: str = "modere") -> str:
+async def build_market_context(budget: int, filter_type: str = "all", risk_profile: str = "modere") -> str:
     markets = await get_all_markets()
     profile = RISK_PROFILES.get(risk_profile, RISK_PROFILES["modere"])
 
@@ -178,7 +178,7 @@ async def get_agent_suggestions(budget: int, filter_type: str = "all", risk_prof
         cached["_cached"] = True
         return cached
 
-    context = build_market_context(budget, filter_type, risk_profile)
+    context = await build_market_context(budget, filter_type, risk_profile)
 
     text = await _call_deepseek([
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -193,7 +193,7 @@ async def get_agent_suggestions(budget: int, filter_type: str = "all", risk_prof
 
 async def chat_with_agent(user_message: str, budget: int = 200,
                           risk_profile: str = "modere", history: list = None) -> str:
-    context = build_market_context(budget, risk_profile=risk_profile)
+    context = await build_market_context(budget, risk_profile=risk_profile)
 
     system = (
         SYSTEM_PROMPT
