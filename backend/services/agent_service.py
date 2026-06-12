@@ -1,13 +1,29 @@
 import os
 import json
-from groq import Groq
+import time
+import httpx
 from services.market_service import get_all_markets, get_enriched_asset, get_all_alerts
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL = "llama-3.3-70b-versatile"
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+MODEL = "deepseek-chat"  # V4 Flash
+
+# Cache — évite d'appeler DeepSeek trop souvent (TTL 1 heure)
+_suggestions_cache = {}
+_CACHE_TTL = 3600
+
+def _get_cache(key: str):
+    entry = _suggestions_cache.get(key)
+    if entry and (time.time() - entry["ts"]) < _CACHE_TTL:
+        return entry["data"]
+    return None
+
+def _set_cache(key: str, data: dict):
+    _suggestions_cache[key] = {"data": data, "ts": time.time()}
+
 
 RISK_PROFILES = {
     "prudent": {
@@ -82,6 +98,26 @@ Format JSON attendu :
 """
 
 
+async def _call_deepseek(messages: list, max_tokens: int = 1200) -> str:
+    """Call DeepSeek API directly via httpx."""
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            DEEPSEEK_URL,
+            headers={
+                "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": MODEL,
+                "max_tokens": max_tokens,
+                "messages": messages,
+            }
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+
 def build_market_context(budget: int, filter_type: str = "all", risk_profile: str = "modere") -> str:
     markets = get_all_markets()
     profile = RISK_PROFILES.get(risk_profile, RISK_PROFILES["modere"])
@@ -102,7 +138,6 @@ def build_market_context(budget: int, filter_type: str = "all", risk_profile: st
             vol_info = f" | vol x{data.get('volume_vs_avg', 1)}" if data.get('volume_vs_avg') else ""
             lines.append(f"- {name}: {data['price']} {direction} {data['change_pct']:+.2f}%{vol_info}")
 
-    # Indicateurs enrichis pour les actifs principaux
     top_symbols = {
         "ETF MSCI World": "IWDA.AS",
         "S&P 500": "^GSPC",
@@ -127,7 +162,6 @@ def build_market_context(budget: int, filter_type: str = "all", risk_profile: st
                 f"Score haussier={ind.get('bullish_score')}/100"
             )
 
-    # Alertes automatiques
     auto_alerts = get_all_alerts()
     if auto_alerts:
         lines.append("\n=== ALERTES DÉTECTÉES ===")
@@ -138,28 +172,27 @@ def build_market_context(budget: int, filter_type: str = "all", risk_profile: st
 
 
 async def get_agent_suggestions(budget: int, filter_type: str = "all", risk_profile: str = "modere") -> dict:
+    cache_key = f"{budget}:{filter_type}:{risk_profile}"
+    cached = _get_cache(cache_key)
+    if cached:
+        cached["_cached"] = True
+        return cached
+
     context = build_market_context(budget, filter_type, risk_profile)
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        max_tokens=1200,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"Voici les données de marché. Génère tes suggestions.\n\n{context}\n\nRéponds uniquement en JSON valide, sans balises markdown."
-            }
-        ]
-    )
+    text = await _call_deepseek([
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Voici les données de marché. Génère tes suggestions.\n\n{context}\n\nRéponds uniquement en JSON valide, sans balises markdown."}
+    ])
 
-    text = response.choices[0].message.content.strip()
-    text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    return json.loads(text)
+    text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    result = json.loads(text)
+    _set_cache(cache_key, result)
+    return result
 
 
 async def chat_with_agent(user_message: str, budget: int = 200,
                           risk_profile: str = "modere", history: list = None) -> str:
-    """Chat with memory — history is a list of {role, content} dicts."""
     context = build_market_context(budget, risk_profile=risk_profile)
 
     system = (
@@ -169,19 +202,12 @@ async def chat_with_agent(user_message: str, budget: int = 200,
         + f"\n\nContexte marché actuel:\n{context}"
     )
 
-    messages = []
+    messages = [{"role": "system", "content": system}]
 
-    # Inject conversation history for memory
     if history:
-        for msg in history[-10:]:  # garde les 10 derniers messages max
+        for msg in history[-10:]:
             messages.append({"role": msg["role"], "content": msg["content"]})
 
     messages.append({"role": "user", "content": user_message})
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        max_tokens=1000,
-        messages=[{"role": "system", "content": system}] + messages
-    )
-
-    return response.choices[0].message.content
+    return await _call_deepseek(messages)
