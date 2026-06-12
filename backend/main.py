@@ -1,11 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from routers import markets, agent, alerts
 from services.telegram_service import send_scheduled_alerts
+from core.security import security_middleware
 
 app = FastAPI(title="Market Agent API", version="1.0.0")
 
+# Security middleware — logs, rate limiting, IP blocking
+app.add_middleware(BaseHTTPMiddleware, dispatch=security_middleware)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

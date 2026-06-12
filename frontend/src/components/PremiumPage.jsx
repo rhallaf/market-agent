@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Check, X, Zap, TrendingUp, Bell, MessageSquare, BarChart2, BookOpen } from "lucide-react";
 
-const PAYPAL_CLIENT_ID = "AShLY53H8XU8H2F6FjOULTGhXeo9VSwrslM9nL8v5LNXapjHkxkTmhubnnW_f9xfWqazCvEALmAIMJHO";
-const PAYPAL_PLAN_ID = "P-7BS01620CU4022845NIWBKYI";
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+const PAYPAL_PLAN_ID = import.meta.env.VITE_PAYPAL_PLAN_ID;
 
 const FEATURES = [
   { icon: TrendingUp,   label: "Suggestions par jour",  free: "2",    premium: "Illimitées" },
