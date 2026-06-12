@@ -119,7 +119,7 @@ function AppContent() {
       </div>
 
       <nav className="border-b border-gray-800 px-6">
-        <div className="flex">
+        <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map(({ id, label, icon: Icon, premium }) => (
             <button key={id}
               onClick={() => {
