@@ -1,6 +1,5 @@
 import os
 import httpx
-import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -176,42 +175,42 @@ def _compute_indicators(candles: list) -> dict:
         return {}
 
 
-def get_quote(symbol: str) -> dict | None:
-    return asyncio.run(_get_quote_async(symbol))
+async def get_quote(symbol: str) -> dict | None:
+    return await _get_quote_async(symbol)
 
 
-def get_history(symbol: str, period: str = "1mo") -> list:
-    return asyncio.run(_get_candles_async(symbol))
+async def get_history(symbol: str, period: str = "1mo") -> list:
+    return await _get_candles_async(symbol)
 
 
-def get_technical_indicators(symbol: str) -> dict:
-    candles = asyncio.run(_get_candles_async(symbol, count=60))
+async def get_technical_indicators(symbol: str) -> dict:
+    candles = await _get_candles_async(symbol, count=60)
     return _compute_indicators(candles)
 
 
-def get_all_markets() -> dict:
+async def get_all_markets() -> dict:
     result = {}
     for category, symbols in SYMBOLS.items():
         result[category] = {}
         for name, symbol in symbols.items():
-            quote = get_quote(symbol)
+            quote = await get_quote(symbol)
             if quote:
                 result[category][name] = {"symbol": symbol, **quote}
     return result
 
 
-def get_enriched_asset(symbol: str) -> dict:
-    candles = asyncio.run(_get_candles_async(symbol, count=60))
+async def get_enriched_asset(symbol: str) -> dict:
+    candles = await _get_candles_async(symbol, count=60)
     return {
         "symbol": symbol,
-        "quote": get_quote(symbol),
+        "quote": await get_quote(symbol),
         "indicators": _compute_indicators(candles),
         "history": candles[-30:],
     }
 
 
-def detect_alerts(symbol: str, name: str) -> list:
-    candles = asyncio.run(_get_candles_async(symbol, count=60))
+async def detect_alerts(symbol: str, name: str) -> list:
+    candles = await _get_candles_async(symbol, count=60)
     ind = _compute_indicators(candles)
     alerts = []
     if not ind:
@@ -227,11 +226,11 @@ def detect_alerts(symbol: str, name: str) -> list:
     return alerts
 
 
-def get_all_alerts() -> list:
+async def get_all_alerts() -> list:
     all_alerts = []
     for category, symbols in SYMBOLS.items():
         if category == "indices":
             continue
         for name, symbol in symbols.items():
-            all_alerts.extend(detect_alerts(symbol, name))
+            all_alerts.extend(await detect_alerts(symbol, name))
     return all_alerts

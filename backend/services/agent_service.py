@@ -119,7 +119,7 @@ async def _call_deepseek(messages: list, max_tokens: int = 1200) -> str:
 
 
 def build_market_context(budget: int, filter_type: str = "all", risk_profile: str = "modere") -> str:
-    markets = get_all_markets()
+    markets = await get_all_markets()
     profile = RISK_PROFILES.get(risk_profile, RISK_PROFILES["modere"])
 
     lines = [
@@ -148,7 +148,7 @@ def build_market_context(budget: int, filter_type: str = "all", risk_profile: st
 
     lines.append("\n=== INDICATEURS TECHNIQUES AVANCÉS ===")
     for name, symbol in top_symbols.items():
-        enriched = get_enriched_asset(symbol)
+        enriched = await get_enriched_asset(symbol)
         ind = enriched.get("indicators", {})
         if ind:
             lines.append(
@@ -162,7 +162,7 @@ def build_market_context(budget: int, filter_type: str = "all", risk_profile: st
                 f"Score haussier={ind.get('bullish_score')}/100"
             )
 
-    auto_alerts = get_all_alerts()
+    auto_alerts = await get_all_alerts()
     if auto_alerts:
         lines.append("\n=== ALERTES DÉTECTÉES ===")
         for a in auto_alerts[:5]:
