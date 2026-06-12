@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Bell, TrendingUp, MessageSquare, ShieldCheck, Zap, BarChart2 } from "lucide-react";
 import { fetchMarkets, fetchSuggestions, triggerBriefing } from "./services/api";
