@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-HF_TOKEN = os.getenv("HF_TOKEN")
-HF_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3/v1/chat/completions"
-MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+MODEL = "llama-3.3-70b-versatile"
 
 # Cache — évite d'appeler DeepSeek trop souvent (TTL 1 heure)
 _suggestions_cache = {}
@@ -98,13 +98,26 @@ Format JSON attendu :
 """
 
 
-async def _call_hf(messages: list, max_tokens: int = 1200) -> str:
-    """Call HuggingFace Inference API via httpx."""
-    async with httpx.AsyncClient(timeout=60) as client:
+FALLBACK_SUGGESTIONS = {
+    "summary": "Marchés globalement stables. Analyse IA temporairement indisponible.",
+    "market_mood": "neutral",
+    "suggestions": [
+        {"name": "ETF S&P 500", "type": "etf", "signal": "buy", "reason": "Diversification mondiale, faible risque", "min_amount": 50, "confidence": "medium", "risk_level": "faible"},
+        {"name": "ETF Nasdaq", "type": "etf", "signal": "wait", "reason": "Volatilité tech élevée en ce moment", "min_amount": 50, "confidence": "low", "risk_level": "moyenne"},
+        {"name": "Bitcoin", "type": "crypto", "signal": "avoid", "reason": "Haute volatilité, attendre signal clair", "min_amount": 100, "confidence": "low", "risk_level": "élevée"},
+    ],
+    "alerts": [{"message": "Analyse IA en pause — limite API atteinte, réessayez dans 1h", "level": "warning"}],
+    "portfolio_tip": "En l'absence d'analyse IA, privilégiez les ETF diversifiés.",
+    "disclaimer": "Ceci n'est pas un conseil financier officiel."
+}
+
+async def _call_groq(messages: list, max_tokens: int = 1200) -> str:
+    """Call Groq API via httpx."""
+    async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
-            HF_URL,
+            GROQ_URL,
             headers={
-                "Authorization": f"Bearer {HF_TOKEN}",
+                "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json",
             },
             json={
@@ -180,15 +193,18 @@ async def get_agent_suggestions(budget: int, filter_type: str = "all", risk_prof
 
     context = await build_market_context(budget, filter_type, risk_profile)
 
-    text = await _call_hf([
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"Voici les données de marché. Génère tes suggestions.\n\n{context}\n\nRéponds uniquement en JSON valide, sans balises markdown."}
-    ])
-
-    text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    result = json.loads(text)
-    _set_cache(cache_key, result)
-    return result
+    try:
+        text = await _call_groq([
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Voici les données de marché. Génère tes suggestions.\n\n{context}\n\nRéponds uniquement en JSON valide, sans balises markdown."}
+        ])
+        text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        result = json.loads(text)
+        _set_cache(cache_key, result)
+        return result
+    except Exception as e:
+        print(f"Groq error, using fallback: {e}")
+        return FALLBACK_SUGGESTIONS
 
 
 async def chat_with_agent(user_message: str, budget: int = 200,
@@ -210,4 +226,8 @@ async def chat_with_agent(user_message: str, budget: int = 200,
 
     messages.append({"role": "user", "content": user_message})
 
-    return await _call_hf(messages)
+    try:
+        return await _call_groq(messages)
+    except Exception as e:
+        print(f"Groq chat error: {e}")
+        return "L'analyse IA est temporairement indisponible (limite API atteinte). Réessayez dans 1 heure. En attendant, consultez les données de marché dans le dashboard." 
