@@ -17,9 +17,9 @@ SYMBOLS = {
         "Nvidia": "NVDA",
     },
     "etf": {
-        "ETF S&P 500": "SPY",
-        "ETF Nasdaq": "QQQ",
-        "ETF MSCI World": "IWDA",
+        "ETF MSCI World": "EFA",
+        "ETF Europe": "VGK",
+        "ETF Emergents": "EEM",
     },
     "crypto": {
         "Bitcoin": "BINANCE:BTCUSDT",
@@ -27,10 +27,10 @@ SYMBOLS = {
         "Solana": "BINANCE:SOLUSDT",
     },
     "indices": {
-        "S&P 500": "^GSPC",
-        "Nasdaq": "^IXIC",
-        "CAC 40": "^FCHI",
-        "Or": "OANDA:XAUUSD",
+        "S&P 500": "SPY",
+        "Nasdaq": "QQQ",
+        "Or": "GLD",
+        "Bitcoin": "BINANCE:BTCUSDT",
     }
 }
 
