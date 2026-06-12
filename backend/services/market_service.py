@@ -1,6 +1,15 @@
 import yfinance as yf
 import pandas as pd
 import ta
+import requests
+
+# Session avec User-Agent pour éviter le blocage Yahoo Finance sur les serveurs cloud
+_session = requests.Session()
+_session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+})
 
 SYMBOLS = {
     "actions": {
@@ -33,7 +42,7 @@ SYMBOLS = {
 
 def get_quote(symbol: str) -> dict:
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=_session)
         hist = ticker.history(period="5d")
         if hist.empty:
             return None
@@ -55,7 +64,7 @@ def get_quote(symbol: str) -> dict:
 
 def get_history(symbol: str, period: str = "1mo") -> list[dict]:
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=_session)
         hist = ticker.history(period=period)
         if hist.empty:
             return []
@@ -77,7 +86,7 @@ def get_history(symbol: str, period: str = "1mo") -> list[dict]:
 def get_technical_indicators(symbol: str) -> dict:
     """Compute rich technical indicators: RSI, MACD, Bollinger, Stochastic, ATR."""
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=_session)
         hist = ticker.history(period="6mo")
         if hist.empty or len(hist) < 50:
             return {}
