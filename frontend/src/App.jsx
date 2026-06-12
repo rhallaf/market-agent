@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Bell, TrendingUp, MessageSquare, ShieldCheck, Zap, BarChart2 } from "lucide-react";
 import { fetchMarkets, fetchSuggestions, triggerBriefing } from "./services/api";
@@ -67,7 +68,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 font-sans">
       {showPremium && <PremiumPage onClose={() => setShowPremium(false)} />}
-<div className="min-h-screen bg-gray-950 text-gray-100 font-sans overflow-x-hidden">
+
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
