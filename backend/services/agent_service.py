@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-MODEL = "deepseek-chat"  # V4 Flash
+HF_TOKEN = os.getenv("HF_TOKEN")
+HF_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3/v1/chat/completions"
+MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
 
 # Cache — évite d'appeler DeepSeek trop souvent (TTL 1 heure)
 _suggestions_cache = {}
@@ -98,13 +98,13 @@ Format JSON attendu :
 """
 
 
-async def _call_deepseek(messages: list, max_tokens: int = 1200) -> str:
-    """Call DeepSeek API directly via httpx."""
-    async with httpx.AsyncClient(timeout=30) as client:
+async def _call_hf(messages: list, max_tokens: int = 1200) -> str:
+    """Call HuggingFace Inference API via httpx."""
+    async with httpx.AsyncClient(timeout=60) as client:
         response = await client.post(
-            DEEPSEEK_URL,
+            HF_URL,
             headers={
-                "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+                "Authorization": f"Bearer {HF_TOKEN}",
                 "Content-Type": "application/json",
             },
             json={
@@ -180,7 +180,7 @@ async def get_agent_suggestions(budget: int, filter_type: str = "all", risk_prof
 
     context = await build_market_context(budget, filter_type, risk_profile)
 
-    text = await _call_deepseek([
+    text = await _call_hf([
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Voici les données de marché. Génère tes suggestions.\n\n{context}\n\nRéponds uniquement en JSON valide, sans balises markdown."}
     ])
@@ -210,4 +210,4 @@ async def chat_with_agent(user_message: str, budget: int = 200,
 
     messages.append({"role": "user", "content": user_message})
 
-    return await _call_deepseek(messages)
+    return await _call_hf(messages)
