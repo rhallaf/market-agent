@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-const DISPLAY_INDICES = ["CAC 40", "S&P 500", "Or", "Nasdaq"];
+const DISPLAY_INDICES = ["S&P 500", "Nasdaq", "Or", "Bitcoin"];
 
 function QuoteCard({ name, data }) {
   const isUp = data?.direction === "up";
