@@ -3,12 +3,12 @@ import { createContext, useContext, useState } from "react";
 const PremiumContext = createContext();
 
 export function PremiumProvider({ children }) {
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(true);
   const [chatCount, setChatCount] = useState(0);
   const [suggestionCount, setSuggestionCount] = useState(0);
 
-  const FREE_CHAT_LIMIT = 5;
-  const FREE_SUGGESTION_LIMIT = 2;
+  const FREE_CHAT_LIMIT = 999;
+  const FREE_SUGGESTION_LIMIT = 999;
 
   const canChat = isPremium || chatCount < FREE_CHAT_LIMIT;
   const canGetSuggestions = isPremium || suggestionCount < FREE_SUGGESTION_LIMIT;
